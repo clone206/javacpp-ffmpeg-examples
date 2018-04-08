@@ -8,4 +8,4 @@ For now, just the [avio_reading](https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/do
 
 ## Running
 
-`java -jar avio_reading-1.0.jar <media_file>`
+`java -jar target/avio_reading-1.0.jar <media_file>`
