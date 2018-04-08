@@ -1,0 +1,4 @@
+Manifest-Version: 1.0 
+Created-By: Kevin Witmer
+Main-Class: clone206.examples.javacpp_ffmpeg.AVIOReading
+
