@@ -6,7 +6,7 @@ Before following the below building instructions, make sure you have [javacpp](h
 
 ## Building 
 
-*nix/macos:
+*nix/macOS:
 
 `./build_avio_reading.sh <path_to_javacpp_classes> <path_to_javacpp_ffmpeg_classes>`
 
