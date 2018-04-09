@@ -10,4 +10,4 @@ Depends on [maven](https://maven.apache.org) for building.
 
 ## Running
 
-`java -jar target/avio_reading-1.0.jar <media_file>`
+`java -jar target/avio_reading.jar <media_file>`

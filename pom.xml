@@ -7,6 +7,7 @@
     <groupId>clone206.examples</groupId>
     <artifactId>avio_reading</artifactId>
     <version>1.0</version>
+    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
@@ -17,6 +18,7 @@
     </dependencies>
 
     <build>
+        <finalName>avio_reading</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
