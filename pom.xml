@@ -42,7 +42,9 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>clone206.examples.javacpp_ffmpeg.AVIOReading</mainClass>
+                                    <manifestEntries>
+                                        <Main-Class>clone206.examples.javacpp_ffmpeg.AVIOReading</Main-Class>
+                                    </manifestEntries>
                                 </transformer>
                             </transformers>
                         </configuration>
