@@ -5,9 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>clone206.examples</groupId>
-    <artifactId>avio_reading</artifactId>
+    <artifactId>examples</artifactId>
     <version>1.0</version>
-    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
@@ -18,7 +17,6 @@
     </dependencies>
 
     <build>
-        <finalName>avio_reading</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -35,11 +33,13 @@
                 <version>3.1.0</version>
                 <executions>
                     <execution>
+                        <id>avio_reading</id>
                         <phase>package</phase>
                         <goals>
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <outputFile>target/avio_reading.jar</outputFile>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <manifestEntries>
@@ -47,10 +47,140 @@
                                     </manifestEntries>
                                 </transformer>
                             </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>clone206.examples:examples</artifact>
+                                    <includes>
+                                        <include>clone206/examples/javacpp_ffmpeg/ReadInput.class</include>
+                                        <include>clone206/examples/javacpp_ffmpeg/AVIOReading.class</include>
+                                    </includes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>transcode_aac</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <outputFile>target/transcode_aac.jar</outputFile>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>clone206.examples.javacpp_ffmpeg.TranscodeAAC</Main-Class>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>clone206.examples:examples</artifact>
+                                    <includes>
+                                        <include>clone206/examples/javacpp_ffmpeg/TranscodeAAC.class</include>
+                                    </includes>
+                                </filter>
+                            </filters>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
+
+    <!-- Targeting OS's -->
+    <profiles>
+        <profile>
+          <id>linux</id>
+          <activation>
+            <os><name>linux</name></os>
+          </activation>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-shade-plugin</artifactId>
+                      <configuration>
+                          <artifactSet>
+                            <excludes>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:android-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:macosx-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:windows-*</exclude>
+                            </excludes>
+                          </artifactSet>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+        </profile>
+        <profile>
+          <id>macosx</id>
+          <activation>
+            <os><name>mac os x</name></os>
+          </activation>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-shade-plugin</artifactId>
+                      <configuration>
+                          <artifactSet>
+                            <excludes>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:android-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:linux-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:windows-*</exclude>
+                            </excludes>
+                          </artifactSet>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+        </profile>
+        <profile>
+          <id>windows</id>
+          <activation>
+            <os><family>windows</family></os>
+          </activation>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-shade-plugin</artifactId>
+                      <configuration>
+                          <artifactSet>
+                            <excludes>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:android-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:macosx-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:linux-*</exclude>
+                            </excludes>
+                          </artifactSet>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+        </profile>
+        <profile>
+          <id>android</id>
+          <activation>
+            <os><name>android</name></os>
+          </activation>
+          <build>
+              <plugins>
+                  <plugin>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-shade-plugin</artifactId>
+                      <configuration>
+                          <artifactSet>
+                            <excludes>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:macosx-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:linux-*</exclude>
+                                <exclude>org.bytedeco.javacpp-presets:ffmpeg:windows-*</exclude>
+                            </excludes>
+                          </artifactSet>
+                      </configuration>
+                  </plugin>
+              </plugins>
+          </build>
+        </profile>
+    </profiles>
 </project>

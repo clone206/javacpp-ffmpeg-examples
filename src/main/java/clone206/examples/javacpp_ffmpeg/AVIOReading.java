@@ -27,7 +27,7 @@ import static org.bytedeco.javacpp.avutil.*;
 import static org.bytedeco.javacpp.swscale.*;
 
 /**
- * java javacpp-presets/ffmpeg translation of the transcoding ffmpeg official example
+ * java javacpp-presets/ffmpeg translation of the avio_reading ffmpeg official example
  * https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/doc/examples/avio_reading.c
  * 
  * Depends on javacpp and the ffmpeg javacpp preset,
