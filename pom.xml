@@ -83,6 +83,31 @@
                             </filters>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>transcoding</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <outputFile>target/transcoding.jar</outputFile>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>clone206.examples.javacpp_ffmpeg.Transcoding</Main-Class>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>clone206.examples:examples</artifact>
+                                    <includes>
+                                        <include>clone206/examples/javacpp_ffmpeg/Transcoding*</include>
+                                    </includes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
@@ -94,6 +119,7 @@
           <id>linux</id>
           <activation>
             <os><name>linux</name></os>
+            <property><name>!all_platforms</name></property>
           </activation>
           <build>
               <plugins>
@@ -117,6 +143,7 @@
           <id>macosx</id>
           <activation>
             <os><name>mac os x</name></os>
+            <property><name>!all_platforms</name></property>
           </activation>
           <build>
               <plugins>
@@ -140,6 +167,7 @@
           <id>windows</id>
           <activation>
             <os><family>windows</family></os>
+            <property><name>!all_platforms</name></property>
           </activation>
           <build>
               <plugins>
@@ -163,6 +191,7 @@
           <id>android</id>
           <activation>
             <os><name>android</name></os>
+            <property><name>!all_platforms</name></property>
           </activation>
           <build>
               <plugins>

@@ -42,7 +42,6 @@ import static org.bytedeco.javacpp.swresample.*;
  * @example transcode_aac.c
  * Convert an input audio file to AAC in an MP4 container using FFmpeg.
  */
-
 public class TranscodeAAC {
     /* The output bit rate in kbit/s */
     public static final int OUTPUT_BIT_RATE = 96000;
@@ -51,9 +50,9 @@ public class TranscodeAAC {
 
     // Making these objects (and the below primitives) global avoids pass-by-value gotchas
     static AVFormatContext input_format_context = new AVFormatContext(null),
-                    output_format_context = new AVFormatContext(null);
+                           output_format_context = new AVFormatContext(null);
     static AVCodecContext input_codec_context = new AVCodecContext(null),
-                   output_codec_context = new AVCodecContext(null);
+                          output_codec_context = new AVCodecContext(null);
     static SwrContext resample_context = new SwrContext(null);
     static AVAudioFifo fifo = new AVAudioFifo(null);
     static AVFrame input_frame = av_frame_alloc(),
@@ -64,6 +63,7 @@ public class TranscodeAAC {
     static IntPointer data_present = new IntPointer((long) 1),
                       data_written = new IntPointer((long) 1);
 
+    // For deciding when we've exhausted a buffer
     static int finished = 0;
     /* Global timestamp for the audio frames */
     static long pts = 0;
