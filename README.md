@@ -4,9 +4,9 @@ Includes the following ffmpeg sample programs:
 
 - [avio_reading](https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/doc/examples/avio_reading.c) (API example program to show how to read from a custom buffer accessed through AVIOContext)
 
-- [transcode_aac](https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/doc/examples/transcode_acc.c) (Convert an input audio file to AAC in an MP4 container) ffmpeg sample programs.
+- [transcode_aac](https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/doc/examples/transcode_acc.c) (Convert an input audio file to AAC in an MP4 container)
 
-- [transcoding](https://github.com/FFmpeg/FFmpeg/blob/n3.4.1/doc/examples/transcoding.c) (API example for demuxing, decoding, filtering, encoding and muxing). Java code for the transcoding sample program originally by [hullarb](https://github.com/hullarb/javacpp-ffmpeg-example)
+- [transcoding](https://github.com/FFmpeg/FFmpeg/blob/n3.4.1/doc/examples/transcoding.c) (API example for demuxing, decoding, filtering, encoding and muxing. Java code for the transcoding sample program originally by [hullarb](https://github.com/hullarb/javacpp-ffmpeg-example))
 
 
 Makes use of [javacpp-presets/ffmpeg](https://github.com/bytedeco/javacpp-presets/tree/master/ffmpeg) JNI bindings for [ffmpeg](https://www.ffmpeg.org/).
