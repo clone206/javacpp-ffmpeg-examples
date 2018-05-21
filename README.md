@@ -1,6 +1,6 @@
 # A java implementation of ffmpeg's example utilities
 
-Includes the following ffmpeg sample programs:
+Includes java versions of the following ffmpeg sample programs:
 
 - [avio_reading](https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/doc/examples/avio_reading.c) (API example program to show how to read from a custom buffer accessed through AVIOContext)
 
