@@ -48,25 +48,17 @@ public class TranscodeAAC {
     /* The number of output channels */
     public static final byte OUTPUT_CHANNELS = 2;
 
-    // Making these objects (and the below primitives) global avoids pass-by-value gotchas
-    static AVFormatContext input_format_context = new AVFormatContext(null),
-                           output_format_context = new AVFormatContext(null);
-    static AVCodecContext input_codec_context = new AVCodecContext(null),
-                          output_codec_context = new AVCodecContext(null);
-    static SwrContext resample_context = new SwrContext(null);
-    static AVAudioFifo fifo = new AVAudioFifo(null);
-    static AVFrame input_frame = av_frame_alloc(),
-                   output_frame = av_frame_alloc();
-    static PointerPointer<?> converted_input_samples = new PointerPointer<>((long) OUTPUT_CHANNELS);
-    static AVPacket input_packet = new AVPacket(),
-                    output_packet = new AVPacket();
-    static IntPointer data_present = new IntPointer((long) 1),
-                      data_written = new IntPointer((long) 1);
+    /* Making these ffmpeg objects (and the below primitives) global helps avoid pass-by-value gotchas */
+    static AVCodecContext input_codec_context   = new AVCodecContext(null),
+                          output_codec_context  = new AVCodecContext(null);
+    static AVAudioFifo    fifo                  = new AVAudioFifo(null);
+    static AVFrame        input_frame           = av_frame_alloc(),
+                          output_frame          = av_frame_alloc();
 
-    // For deciding when we've exhausted a buffer
+    /* For deciding when we've exhausted a buffer */
     static int finished = 0;
     /* Global timestamp for the audio frames */
-    static long pts = 0;
+    static long pts     = 0;
 
     /* Custom implementation of missing av_err2str() ffmpeg function */
     static String my_av_err2str (int err) {
@@ -83,7 +75,7 @@ public class TranscodeAAC {
     }
 
     /* Open an input file and the required decoder. */
-    static void openInput (String filename) {
+    static void openInput (String filename, AVFormatContext input_format_context) {
         /* Open the input file to read from it. */
         check( avformat_open_input(input_format_context, filename, null, null) );
         /* Get information on the input file (number of streams etc.). */
@@ -118,7 +110,7 @@ public class TranscodeAAC {
      * Also set some basic encoder parameters.
      * Some of these parameters are based on the input file's parameters.
      */
-    static void openOutput (String filename) {
+    static void openOutput (String filename, AVFormatContext output_format_context) {
         AVCodecContext avctx = new AVCodecContext(null);
         AVIOContext output_io_context = new AVIOContext(null);
         AVStream stream = new AVStream(null);
@@ -180,20 +172,12 @@ public class TranscodeAAC {
         output_codec_context = avctx;
     }
 
-    /* Initialize one data packet for reading. */
-    static void init_input_packet () {
+    /* Initialize one data packet for reading or writing. */
+    static void init_packet (AVPacket packet) {
         /* Set the packet data and size so that it is recognized as being empty. */
-        input_packet.data(null);
-        input_packet.size(0);
-        av_init_packet(input_packet);
-    }
-
-    /* Initialize one data packet for writing. */
-    static void init_output_packet () {
-        /* Set the packet data and size so that it is recognized as being empty. */
-        output_packet.data(null);
-        output_packet.size(0);
-        av_init_packet(output_packet);
+        packet.data(null);
+        packet.size(0);
+        av_init_packet(packet);
     }
 
     /*
@@ -201,7 +185,8 @@ public class TranscodeAAC {
      * If the input and output sample formats differ, a conversion is required
      * libswresample takes care of this, but requires initialization.
      */
-    static void init_resampler () {
+    static SwrContext init_resampler () {
+        SwrContext swctx = new SwrContext(null);
         /*
          * Create a resampler context for the conversion.
          * Set the conversion parameters.
@@ -209,7 +194,7 @@ public class TranscodeAAC {
          * are assumed for simplicity (they are sometimes not detected
          * properly by the demuxer and/or decoder).
          */
-        if ( (resample_context = swr_alloc_set_opts(
+        if ( (swctx = swr_alloc_set_opts(
                     (SwrContext) null,
                     av_get_default_channel_layout(output_codec_context.channels()),
                     output_codec_context.sample_fmt(),
@@ -232,7 +217,9 @@ public class TranscodeAAC {
         }
 
         /* Open the resampler with the specified parameters. */
-        check( swr_init(resample_context) );
+        check( swr_init(swctx) );
+
+        return swctx;
     }
 
     /* Initialize a FIFO buffer for the audio samples to be encoded. */
@@ -248,11 +235,11 @@ public class TranscodeAAC {
     }
 
     /* Decode one audio frame from the input file. */
-    static void decode_audio_frame () {
+    static void decode_audio_frame (AVFormatContext input_format_context, AVPacket input_packet, IntPointer data_present) {
         int error;
 
         /* Initialize packet used for temporary storage. */
-        init_input_packet();
+        init_packet(input_packet);
 
         /* Read one audio frame from the input file into a temporary packet. */
         if ( (error = av_read_frame(input_format_context, input_packet)) < 0) {
@@ -287,7 +274,7 @@ public class TranscodeAAC {
     }
 
     /* Add converted input audio samples to the FIFO buffer for later processing. */
-    static void add_samples_to_fifo () {
+    static void add_samples_to_fifo (PointerPointer converted_input_samples) {
         final int frame_size = input_frame.nb_samples();
 
         /*
@@ -306,7 +293,8 @@ public class TranscodeAAC {
      * Read one audio frame from the input file, decodes, converts and stores
      * it in the FIFO buffer.
      */
-    static void read_decode_convert_and_store () {
+    static void read_decode_convert_and_store (AVFormatContext input_format_context, SwrContext resample_context, 
+            PointerPointer converted_input_samples, AVPacket input_packet, IntPointer data_present) {
         try {
             /* Initialize temporary storage for one input frame. */
             if ( (input_frame = av_frame_alloc()).isNull() ) {
@@ -314,7 +302,7 @@ public class TranscodeAAC {
             }
 
     	    /* Decode one frame worth of audio samples. */
-            decode_audio_frame();
+            decode_audio_frame(input_format_context, input_packet, data_present);
 
     	    /*
              * If we are at the end of the file and there are no more samples
@@ -336,10 +324,10 @@ public class TranscodeAAC {
                     input_frame.extended_data(), input_frame.nb_samples()
                 ) );
         	    /* Add the converted input samples to the FIFO buffer for later processing. */
-                add_samples_to_fifo();
+                add_samples_to_fifo(converted_input_samples);
             }
         }
-        // cleanup
+        /* cleanup */
         finally {
             if ( !converted_input_samples.isNull() ) {
                 av_freep(converted_input_samples);
@@ -383,10 +371,10 @@ public class TranscodeAAC {
     }
 
 	/* Encode one frame worth of audio to the output file. */
-    static void encode_audio_frame () {
+    static void encode_audio_frame (AVFormatContext output_format_context, AVPacket output_packet, IntPointer data_written) {
         int error;
 
-        init_output_packet();
+        init_packet(output_packet);
 
         if ( !output_frame.isNull() ) {
             output_frame.pts( pts );
@@ -412,12 +400,13 @@ public class TranscodeAAC {
      * Load one audio frame from the FIFO buffer, encode and write it to the
      * output file.
      */
-    static void load_encode_and_write () {
+    static void load_encode_and_write (AVFormatContext output_format_context, AVPacket output_packet, 
+            IntPointer data_written) {
         final int frame_size = (av_audio_fifo_size(fifo) < output_codec_context.frame_size()
                 ? av_audio_fifo_size(fifo)
                 : output_codec_context.frame_size()
         );
-        data_written.put(0); // Reset global var
+        data_written.put(0); /* Reset global var */
 
     	/* Initialize temporary storage for one output frame. */
         init_output_frame(frame_size);
@@ -433,7 +422,7 @@ public class TranscodeAAC {
 
         try {
     	    /* Encode one frame worth of audio samples. */
-            encode_audio_frame();
+            encode_audio_frame(output_format_context, output_packet, data_written);
         }
         finally {
             av_frame_free(output_frame);
@@ -442,23 +431,33 @@ public class TranscodeAAC {
 
 	/* Convert an audio file to an AAC file in an MP4 container. */
     public static void main (String[] args) throws IOException {
+        /* Args check */
         if (args.length < 2) {
             System.err.println("\nexample usage: ");
             System.err.println("java -jar transcode_aac.jar <input_file> <output_file>");
             System.exit(-1);
         }
         
-        // Register all formats and codecs
+        AVFormatContext input_format_context        = new AVFormatContext(null),
+                        output_format_context       = new AVFormatContext(null);
+        SwrContext      resample_context            = new SwrContext(null);
+        PointerPointer<?> converted_input_samples   = new PointerPointer<>((long) OUTPUT_CHANNELS);
+        AVPacket        input_packet                = new AVPacket(),
+                        output_packet               = new AVPacket();
+        IntPointer      data_present                = new IntPointer((long) 1),
+                        data_written                = new IntPointer((long) 1);
+
+        /* Register all formats and codecs */
         av_register_all();
 
         try {
             data_present.put(0);
-            // Open input and output files, passing along the contexts
-            openInput(args[0]);
-            openOutput(args[1]);
+            /* Open input and output files, passing along the contexts */
+            openInput(args[0], input_format_context);
+            openOutput(args[1], output_format_context);
 
     	    /* Initialize the resampler to be able to convert audio sample formats. */
-            init_resampler();
+            resample_context = init_resampler();
     	    /* Initialize the FIFO buffer to store audio samples to be encoded. */
             init_fifo();
     	    /* Write the header of the output file container. */
@@ -481,7 +480,8 @@ public class TranscodeAAC {
                     * Decode one frame worth of audio samples, convert it to the
                     * output sample format and put it into the FIFO buffer.
                     */
-                    read_decode_convert_and_store();
+                    read_decode_convert_and_store(input_format_context, resample_context, 
+                            converted_input_samples, output_packet, data_present);
                     
             	    /*
                     * If we are at the end of the input file, we continue
@@ -503,7 +503,7 @@ public class TranscodeAAC {
                     * Take one frame worth of audio samples from the FIFO buffer,
                     * encode it and write it to the output file.
                     */
-                    load_encode_and_write();
+                    load_encode_and_write(output_format_context, output_packet, data_written);
                 }
 
         	    /*
@@ -514,7 +514,7 @@ public class TranscodeAAC {
                     data_written.put(0);
             	    /* Flush the encoder as it may have delayed frames. */
                     do {
-                        encode_audio_frame();
+                        encode_audio_frame(output_format_context, output_packet, data_written);
                     }
                     while (data_written.get() != 0);
                     break;
@@ -524,10 +524,10 @@ public class TranscodeAAC {
     	    /* Write the trailer of the output file container. */
             check( av_write_trailer(output_format_context) );
         }
-        // cleanup
+        /* cleanup */
         finally {
             if ( !fifo.isNull() ) {
-                swr_free(resample_context);
+                av_audio_fifo_free(fifo);
             }
             swr_free(resample_context);
             
