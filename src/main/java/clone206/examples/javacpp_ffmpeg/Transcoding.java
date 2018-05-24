@@ -59,10 +59,12 @@ public class Transcoding {
             AVCodecContext codecContext = avcodec_alloc_context3(decoder);
             check(avcodec_parameters_to_context(codecContext, stream.codecpar()));
             
+            /* Reencode video & audio and remux subtitles etc. */
             if (codecContext.codec_type() == AVMEDIA_TYPE_VIDEO || codecContext.codec_type() == AVMEDIA_TYPE_AUDIO) {
                 if (codecContext.codec_type() == AVMEDIA_TYPE_VIDEO) {
                     codecContext.framerate(av_guess_frame_rate(inputFormatContext, stream, null));
                 }
+                /* Open decoder */
                 check(avcodec_open2(codecContext, decoder, (AVDictionary) null));
             }
             streamContexts[i].decoderContext = codecContext;
@@ -82,14 +84,19 @@ public class Transcoding {
 
             if (decoderContext.codec_type() == AVMEDIA_TYPE_VIDEO ||
                     decoderContext.codec_type() == AVMEDIA_TYPE_AUDIO) {
+                /* in this example, we choose transcoding to same codec */
                 AVCodec encoder = avcodec_find_encoder(decoderContext.codec_id());
                 AVCodecContext encoderContext = avcodec_alloc_context3(encoder);
 
+                /* In this example, we transcode to same properties (picture size,
+                 * sample rate etc.). These properties can be changed for output
+                 * streams easily using filters */
                 if (decoderContext.codec_type() == AVMEDIA_TYPE_VIDEO) {
                     encoderContext.height(decoderContext.height());
                     encoderContext.width(decoderContext.width());
                     encoderContext.sample_aspect_ratio(decoderContext.sample_aspect_ratio());
 
+                    /* take first format from list of supported formats */
                     if (encoder.pix_fmts() != null && encoder.pix_fmts().asBuffer() != null) {
                         encoderContext.pix_fmt(encoder.pix_fmts().get(0));
                     } else {
@@ -101,10 +108,12 @@ public class Transcoding {
                     encoderContext.sample_rate(decoderContext.sample_rate());
                     encoderContext.channel_layout(decoderContext.channel_layout());
                     encoderContext.channels(av_get_channel_layout_nb_channels(encoderContext.channel_layout()));
+                    /* take first format from list of supported formats */
                     encoderContext.sample_fmt(encoder.sample_fmts().get(0));
                     encoderContext.time_base(av_make_q(1, encoderContext.sample_rate()));
                 }
 
+                /* Third parameter can be used to pass settings to encoder */
                 check(avcodec_open2(encoderContext, encoder, (AVDictionary) null));
                 check(avcodec_parameters_from_context(outStream.codecpar(), encoderContext));
 
@@ -118,6 +127,7 @@ public class Transcoding {
                 if (decoderContext.codec_type() == AVMEDIA_TYPE_UNKNOWN) {
                     throw new RuntimeException();
                 } else {
+                    /* if this stream must be remuxed */
                     check(avcodec_parameters_copy(outStream.codecpar(), inStream.codecpar()));
                     outStream.time_base(inStream.time_base());
                 }
@@ -132,6 +142,7 @@ public class Transcoding {
             outputFormatContext.pb(c);
         }
 
+        /* init muxer, write output file header */
         check(avformat_write_header(outputFormatContext, (AVDictionary) null));
         return outputFormatContext;
     }
@@ -201,6 +212,7 @@ public class Transcoding {
                 }
             }
 
+            /* Endpoints for the filter graph. */
             outputs.name(new BytePointer(av_strdup("in")));
             outputs.filter_ctx(buffersrcContext);
             outputs.pad_idx(0);
@@ -214,6 +226,7 @@ public class Transcoding {
             check(avfilter_graph_parse_ptr(filterGraph, filterSpec, inputs, outputs, null));
             check(avfilter_graph_config(filterGraph, null));
 
+            /* Fill FilteringContext */
             filteringContext.bufferSourceContext = buffersrcContext;
             filteringContext.bufferSinkContext = buffersinkContext;
             filteringContext.filterGraph = filterGraph;
@@ -237,9 +250,9 @@ public class Transcoding {
             filteringContexts[i] = new FilteringContext();
 
             if (inputFormatContext.streams(i).codecpar().codec_type() == AVMEDIA_TYPE_VIDEO) {
-                filterSpec = "null";
+                filterSpec = "null"; /* passthrough (dummy) filter for video */
             } else {
-                filterSpec = "anull";
+                filterSpec = "anull"; /* passthrough (dummy) filter for audio */
             }
 
             initFilter(filteringContexts[i], streamContexts[i].decoderContext, streamContexts[i].encoderContext, filterSpec);
@@ -248,6 +261,7 @@ public class Transcoding {
 
     static boolean encodeWriteFrame(AVFrame filterFrame, int streamIndex) {
         AVPacket encodedPacket = new AVPacket();
+        /* encode filtered frame */
         encodedPacket.data(null);
         encodedPacket.size(0);
 
@@ -267,25 +281,33 @@ public class Transcoding {
             return false;
         }
 
+        /* prepare packet for muxing */
         encodedPacket.stream_index(streamIndex);
 
         av_packet_rescale_ts(encodedPacket, streamContexts[streamIndex].encoderContext.time_base(),
                 outputFormatContext.streams(streamIndex).time_base());
 
+        /* mux encoded frame */
         check(av_interleaved_write_frame(outputFormatContext, encodedPacket));
 
         return true;
     }
 
     static void filterEncodeWriteFrame(AVFrame frame, int streamIndex) {
+        /* push the decoded frame into the filtergraph */
         check(av_buffersrc_add_frame_flags(filteringContexts[streamIndex].bufferSourceContext,
                 frame, 0));
 
+        /* pull filtered frames from the filtergraph */
         while (true) {
             AVFrame filterFrame = av_frame_alloc();
 
             int ret = av_buffersink_get_frame(filteringContexts[streamIndex].bufferSinkContext, filterFrame);
 
+            /* if no more frames for output - returns AVERROR(EAGAIN)
+             * if flushed and no more frames for output - returns AVERROR_EOF
+             * rewrite retcode to 0 to show it as normal procedure completion
+             */
             if (ret == AVERROR_EOF() || ret == AVERROR_EAGAIN()) {
                 av_frame_free(filterFrame);
                 return;
@@ -326,6 +348,7 @@ public class Transcoding {
             int[] gotFrame = new int[1];
             AVPacket packet = new AVPacket();
             
+            /* read all packets */
             while (av_read_frame(inputFormatContext, packet) >= 0) {
                 try {
                     int streamIndex = packet.stream_index();
@@ -351,6 +374,7 @@ public class Transcoding {
                             av_frame_free(frame);
                         }
                     } else {
+                        /* remux this frame without reencoding */
                         av_packet_rescale_ts(packet, inputFormatContext.streams(streamIndex).time_base(),
                                 outputFormatContext.streams(streamIndex).time_base());
                         check(av_interleaved_write_frame(outputFormatContext, packet));
@@ -360,12 +384,15 @@ public class Transcoding {
                 }
             }
 
+            /* flush filters and encoders */
             for (int i = 0; i < inputFormatContext.nb_streams(); i++) {
+                /* flush filter */
                 if (filteringContexts[i].filterGraph == null) {
                     continue;
                 }
 
                 filterEncodeWriteFrame(null, i);
+                /* flush encoder */
                 flushEncoder(i);
             }
 
