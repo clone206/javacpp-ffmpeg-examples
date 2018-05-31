@@ -33,3 +33,5 @@ Depends on [maven](https://maven.apache.org) for building.
 `java -jar target/transcode_aac.jar <input_audio_file> <output_mp4>`
 
 `java -jar target/transcoding.jar <input_movie> <output_movie_mp4>`
+
+`java -jar target/filtering_audio.jar <audio_file> | ffplay -f s16le -ar 8000 -ac 1 -`
