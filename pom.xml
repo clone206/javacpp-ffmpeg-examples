@@ -108,6 +108,31 @@
                             </filters>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>filtering_audio</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <outputFile>target/filtering_audio.jar</outputFile>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <manifestEntries>
+                                        <Main-Class>clone206.examples.javacpp_ffmpeg.FilteringAudio</Main-Class>
+                                    </manifestEntries>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter>
+                                    <artifact>clone206.examples:examples</artifact>
+                                    <includes>
+                                        <include>clone206/examples/javacpp_ffmpeg/FilteringAudio.class</include>
+                                    </includes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

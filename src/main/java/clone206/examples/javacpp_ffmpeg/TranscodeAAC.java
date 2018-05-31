@@ -366,7 +366,7 @@ public class TranscodeAAC {
          */
         if ((error = av_frame_get_buffer(output_frame, 0)) < 0) {
             av_frame_free(output_frame);
-            throw new RuntimeException("Could not allocate output frame samples (error'" + my_av_err2str(error) + "')");
+            throw new RuntimeException("Could not allocate output frame samples (error '" + my_av_err2str(error) + "')");
         }
     }
 

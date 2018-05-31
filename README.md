@@ -8,6 +8,8 @@ Includes java versions of the following ffmpeg sample programs:
 
 - [transcoding](https://github.com/FFmpeg/FFmpeg/blob/n3.4.1/doc/examples/transcoding.c) (API example for demuxing, decoding, filtering, encoding and muxing. Java code for the transcoding sample program originally by [hullarb](https://github.com/hullarb/javacpp-ffmpeg-example))
 
+- [filtering_audio](https://github.com/FFmpeg/FFmpeg/blob/n3.4.2/doc/examples/filtering_audio.c) (API example for audio decoding and filtering)
+
 
 Makes use of [javacpp-presets/ffmpeg](https://github.com/bytedeco/javacpp-presets/tree/master/ffmpeg) JNI bindings for [ffmpeg](https://www.ffmpeg.org/).
 
