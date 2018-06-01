@@ -19,7 +19,6 @@
 package clone206.examples.javacpp_ffmpeg;
 
 import java.io.*;
-import java.nio.*;
 import org.bytedeco.javacpp.*;
 
 import static org.bytedeco.javacpp.avcodec.*;
@@ -34,14 +33,14 @@ import static org.bytedeco.javacpp.avutil.*;
  */
 public class FilteringAudio {
     public static final String filter_descr = "aresample=8000,aformat=sample_fmts=s16:channel_layouts=mono";
-    public static final String player = "ffplay -f s16le -ar 8000 -ac 1 -";
+    public static final String player       = "ffplay -f s16le -ar 8000 -ac 1 -";
 
-    static AVFormatContext fmt_ctx = new AVFormatContext(null);
-    static AVCodecContext dec_ctx = new AVCodecContext(null);
-    static AVFilterContext buffersink_ctx = new AVFilterContext(),
-                           buffersrc_ctx = new AVFilterContext();
-    static AVFilterGraph filter_graph = new AVFilterGraph();
-    static int audio_stream_index = -1;
+    static AVFormatContext fmt_ctx          = new AVFormatContext(null);
+    static AVCodecContext dec_ctx           = new AVCodecContext(null);
+    static AVFilterContext buffersink_ctx   = new AVFilterContext(),
+                           buffersrc_ctx    = new AVFilterContext();
+    static AVFilterGraph filter_graph       = new AVFilterGraph();
+    static int audio_stream_index           = -1;
 
     /* Custom implementation of missing av_err2str() ffmpeg function */
     static String my_av_err2str (int err) {
@@ -84,9 +83,9 @@ public class FilteringAudio {
     }
 
     static void init_filters (String filters_descr) {
-        BytePointer args = new BytePointer(512);
-        AVFilter abuffersrc  = avfilter_get_by_name("abuffer"),
-                 abuffersink = avfilter_get_by_name("abuffersink");
+        BytePointer args      = new BytePointer(512);
+        AVFilter abuffersrc   = avfilter_get_by_name("abuffer"),
+                 abuffersink  = avfilter_get_by_name("abuffersink");
         AVFilterInOut outputs = avfilter_inout_alloc(),
                       inputs  = avfilter_inout_alloc();
 
@@ -123,8 +122,6 @@ public class FilteringAudio {
                         time_base.num(), time_base.den(), dec_ctx.sample_rate(),
                         av_get_sample_fmt_name(dec_ctx.sample_fmt()).getString(), dec_ctx.channel_layout()
             ));
-
-            System.err.println( "filter args: " + args.getString() );
 
             check( avfilter_graph_create_filter(buffersrc_ctx, abuffersrc, new BytePointer("in"), args, null, filter_graph) );
 
@@ -186,7 +183,7 @@ public class FilteringAudio {
     }
 
     static void print_frame (final AVFrame frame) throws IOException {
-        final int n = frame.nb_samples() * av_get_channel_layout_nb_channels( frame.channel_layout() );
+        final int n         = frame.nb_samples() * av_get_channel_layout_nb_channels( frame.channel_layout() );
         byte[] sample_bytes = new byte[2];
 
 
@@ -203,12 +200,11 @@ public class FilteringAudio {
             System.exit(-1);
         }
 
-        int ret = 0;
-        AVPacket packet = new AVPacket();
-        AVFrame frame = av_frame_alloc(),
-                filt_frame = av_frame_alloc();
+        int ret             = 0;
+        AVPacket packet     = new AVPacket();
+        AVFrame frame       = av_frame_alloc(),
+                filt_frame  = av_frame_alloc();
            
-
         try {
             if (frame.isNull() || filt_frame.isNull()) {
                 throw new RuntimeException("Could not allocate frame");
@@ -222,14 +218,10 @@ public class FilteringAudio {
 
             /* read all packets */
             while (true) {
-                if ( (ret = av_read_frame(fmt_ctx, packet)) < 0 ) {
-                    break;
-                }
+                check( ret = av_read_frame(fmt_ctx, packet) );
 
                 if (packet.stream_index() == audio_stream_index) {
-                    if ((ret = avcodec_send_packet(dec_ctx, packet)) < 0) {
-                        break;
-                    }
+                    check( avcodec_send_packet(dec_ctx, packet) );
 
                     while (ret >= 0) {
                         /* push the audio data from decoded frame into the filtergraph */
